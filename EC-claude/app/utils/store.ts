@@ -10,6 +10,9 @@ const useStore = create<StoreState>((set, get) => ({
   isLoading: false,
   currentSummary: '',
   currentMarkdownPaths: [],
+  streamingMessage: '',
+  isStreaming: false,
+  vectorSearch: null,
 
   addChatMessage: (message: ChatMessage) =>
     set((state) => ({ chatMessages: [...state.chatMessages, message] })),
@@ -27,7 +30,6 @@ const useStore = create<StoreState>((set, get) => ({
       const subProducts = findProductsByIds(response.sub_products);
       const relatedProducts = findProductsByIds(response.related_products);
 
-      // AIメッセージを追加
       const aiMessage: ChatMessage = {
         type: 'ai',
         content: response.message,
@@ -46,11 +48,16 @@ const useStore = create<StoreState>((set, get) => ({
 
   getFilteredProducts: () => {
     const { allProducts } = get();
-    // 最大50件まで返す
     return allProducts.slice(0, 50);
   },
 
   setAllProducts: (products: Product[]) => set({ allProducts: products }),
+
+  setStreamingMessage: (message: string) => set({ streamingMessage: message }),
+
+  setIsStreaming: (streaming: boolean) => set({ isStreaming: streaming }),
+
+  setVectorSearch: (vectorSearch: any) => set({ vectorSearch }),
 }));
 
 export default useStore;

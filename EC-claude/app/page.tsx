@@ -7,6 +7,7 @@ import ProductList from './components/ProductList';
 import AccessoryList from './components/AccessoryList';
 import Banner from './components/Banner';
 import RelatedProductsList from './components/RelatedProductsList';
+import VectorSearch from './utils/VectorSearch';
 import { Product } from './types';
 
 export default function Home() {
@@ -16,29 +17,37 @@ export default function Home() {
     subProducts, 
     relatedProducts,
     isLoading, 
-    currentSummary,
-    setAllProducts 
+    streamingMessage,
+    isStreaming,
+    setAllProducts,
+    setVectorSearch
   } = useStore();
   
   const [showResults, setShowResults] = useState(false);
+  const [vectorSearch] = useState(() => new VectorSearch());
 
   useEffect(() => {
-    // 商品データを読み込み
     const loadProducts = async () => {
       try {
         const response = await fetch('/data/products.json');
         const products: Product[] = await response.json();
         setAllProducts(products);
+        
+        // RAG用にベクトル化（バックグラウンドで実行）
+        console.log('🔍 RAG検索の初期化中...');
+        setVectorSearch(vectorSearch);
+        vectorSearch.indexProducts(products).then(() => {
+          console.log('✅ RAG検索の準備完了');
+        });
       } catch (error) {
         console.error('商品データの読み込みに失敗しました:', error);
       }
     };
 
     loadProducts();
-  }, [setAllProducts]);
+  }, [setAllProducts, setVectorSearch, vectorSearch]);
 
   useEffect(() => {
-    // AIの結果が返ってきたときにアニメーション表示
     if (mainProducts.length > 0 || subProducts.length > 0) {
       setShowResults(true);
     } else {
@@ -48,7 +57,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-      {/* Header */}
       <header className="bg-white shadow-sm border-b backdrop-blur-sm bg-white/90 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-6">
           <h1 className="text-3xl font-bold text-gray-900 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
@@ -58,25 +66,9 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8 pb-32">
 
-        {/* AI Summary Banner */}
-        {currentSummary && showResults && (
-          <div className="mb-8 animate-fade-in-up">
-            <div className="bg-gradient-to-r from-blue-100 to-purple-100 rounded-xl p-6 shadow-sm border border-blue-200">
-              <h2 className="text-lg font-semibold text-gray-800 mb-2">
-                📝 要望の要約
-              </h2>
-              <p className="text-gray-700">{currentSummary}</p>
-            </div>
-          </div>
-        )}
-
-        {/* AI Message Banner */}
         <Banner />
-
-        {/* Loading State with Enhanced Animation */}
         {isLoading && (
           <div className="flex flex-col justify-center items-center py-16 animate-pulse">
             <div className="relative">
@@ -94,10 +86,23 @@ export default function Home() {
           </div>
         )}
 
-        {/* Products Display with Animation */}
+        {/* ストリーミング中のAI回答表示 */}
+        {isStreaming && streamingMessage && (
+          <div className="mb-8 animate-fade-in-up">
+            <div className="bg-gradient-to-r from-blue-100 to-purple-100 rounded-xl p-6 shadow-sm border border-blue-200">
+              <h2 className="text-lg font-semibold text-gray-800 mb-2">
+                🤖 AIが回答中...
+              </h2>
+              <p className="text-gray-700 whitespace-pre-wrap min-h-[1.5rem]">
+                {streamingMessage}
+                <span className="animate-pulse text-blue-500">|</span>
+              </p>
+            </div>
+          </div>
+        )}
+
         {showResults && !isLoading && (
           <div className="animate-fade-in-up space-y-8">
-            {/* Main Products */}
             {mainProducts.length > 0 && (
               <div className="animate-slide-in-left">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
@@ -108,9 +113,7 @@ export default function Home() {
               </div>
             )}
 
-            {/* Sub Products and Related Products Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Sub Products */}
               {subProducts.length > 0 && (
                 <div className="animate-slide-in-right">
                   <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
@@ -121,7 +124,6 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Related Products */}
               {relatedProducts.length > 0 && (
                 <div className="animate-slide-in-left">
                   <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
@@ -135,7 +137,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Default All Products Display (when no AI selection) */}
         {!showResults && !isLoading && (
           <div className="mb-8 animate-fade-in">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">全ての商品</h2>
@@ -177,7 +178,6 @@ export default function Home() {
         )}
       </main>
 
-      {/* Fixed Chat Box at Bottom */}
       <ChatBox />
     </div>
   );

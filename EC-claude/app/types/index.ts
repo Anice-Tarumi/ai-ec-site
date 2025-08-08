@@ -44,9 +44,15 @@ export interface StoreState {
   isLoading: boolean;
   currentSummary: string;
   currentMarkdownPaths: string[];
+  streamingMessage: string;
+  isStreaming: boolean;
+  vectorSearch: any; // VectorSearch instance
   addChatMessage: (message: ChatMessage) => void;
   setIsLoading: (loading: boolean) => void;
   handleAIResponse: (response: AIResponse) => void;
   getFilteredProducts: () => Product[];
   setAllProducts: (products: Product[]) => void;
+  setStreamingMessage: (message: string) => void;
+  setIsStreaming: (streaming: boolean) => void;
+  setVectorSearch: (vectorSearch: any) => void;
 }

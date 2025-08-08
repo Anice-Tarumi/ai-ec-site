@@ -9,7 +9,11 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@ai-sdk/google": "^2.0.3",
+    "@ai-sdk/react": "^2.0.8",
     "@google/genai": "^1.12.0",
+    "@xenova/transformers": "^2.17.2",
+    "ai": "^5.0.8",
     "next": "^15.4.5",
     "react": "^18",
     "react-dom": "^18",
@@ -20,7 +24,7 @@
     "@types/react": "^19.1.9",
     "autoprefixer": "^10.0.1",
     "eslint": "^8",
-    "eslint-config-next": "14.0.3",
+    "eslint-config-next": "15.4.5",
     "postcss": "^8",
     "tailwindcss": "^3.3.0",
     "typescript": "^5.9.2"

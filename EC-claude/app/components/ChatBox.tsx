@@ -1,48 +1,166 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+// import { useChat } from '@ai-sdk/react';
 import useStore from '../utils/store';
-import AIService from '../utils/AIService';
 
 export default function ChatBox() {
-  const [inputValue, setInputValue] = useState('');
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const streamingMessageRef = useRef('');
   const { 
     addChatMessage, 
     handleAIResponse, 
-    setIsLoading, 
-    isLoading, 
-    getFilteredProducts 
+    getFilteredProducts,
+    setStreamingMessage,
+    setIsStreaming
   } = useStore();
+
+  // const { messages, sendMessage, stop } = useChat({
+  //   onFinish: (message: any) => {
+  //     setIsLoading(false);
+  //     setIsStreaming(false);
+  //     setStreamingMessage('');
+  //     streamingMessageRef.current = '';
+      
+  //     // AI応答をパースしてストアに保存
+  //     try {
+  //       const content = message.content;
+  //       const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/\{[\s\S]*\}/);
+        
+  //       if (jsonMatch) {
+  //         const jsonStr = jsonMatch[1] || jsonMatch[0];
+  //         const aiResponse = JSON.parse(jsonStr);
+  //         handleAIResponse(aiResponse);
+  //       } else {
+  //         // JSONが見つからない場合は通常のメッセージとして処理
+  //         addChatMessage({
+  //           type: 'ai',
+  //           content: content,
+  //           timestamp: new Date().toISOString()
+  //         });
+  //       }
+  //     } catch (error) {
+  //       console.error('Failed to parse AI response:', error);
+  //       addChatMessage({
+  //         type: 'ai',
+  //         content: message.content,
+  //         timestamp: new Date().toISOString()
+  //       });
+  //     }
+  //   }
+  // });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!inputValue.trim() || isLoading) return;
+    if (!input.trim() || isLoading) return;
 
-    const userMessage = inputValue.trim();
-    setInputValue('');
+    const userMessage = input.trim();
+    setInput('');
+    setIsLoading(true);
+    setIsStreaming(true);
+    setStreamingMessage('');
+    streamingMessageRef.current = '';
 
-    // ユーザーメッセージを追加
+    // ユーザーメッセージをストアに追加
     addChatMessage({
       type: 'user',
       content: userMessage,
       timestamp: new Date().toISOString()
     });
 
-    // ローディング開始
-    setIsLoading(true);
-
     try {
-      // 商品データを取得（50件まで）
+      // 商品データを取得してAPIに送信
       const products = getFilteredProducts();
+      console.log('📡 API呼び出し開始:', userMessage);
       
-      // AI サービスを呼び出し
-      const response = await AIService.sendMessage(userMessage, products);
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userInput: userMessage,
+          products: products
+        })
+      });
+
+      if (!response.ok) {
+        console.error('❌ API応答エラー:', response.status, response.statusText);
+        throw new Error(`HTTP ${response.status}`);
+      }
       
+      console.log('✅ API応答受信:', response.status);
+
+      // ストリーミングレスポンスの処理
+      console.log('📖 ストリーミング読み取り開始');
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('ストリームの読み取りができませんでした');
+
+      const decoder = new TextDecoder();
+      let fullResponse = '';
+
+      try {
+        let readCount = 0;
+        while (true) {
+          const { done, value } = await reader.read();
+          readCount++;
+          console.log(`📚 ストリーミング読み取り #${readCount}:`, done, value?.length);
+          
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          fullResponse += chunk;
+          console.log('📝 受信チャンク:', chunk.substring(0, 100) + (chunk.length > 100 ? '...' : ''));
+          
+          // ストリーミング表示用（リアルタイム更新）
+          setStreamingMessage(fullResponse);
+        }
+        console.log('✅ ストリーミング読み取り完了');
+        console.log('📊 最終レスポンス:', fullResponse);
+      } finally {
+        reader.releaseLock();
+      }
+
+      // 最終レスポンスの処理
+      setStreamingMessage('');
       
-      // レスポンスを処理
-      handleAIResponse(response);
+      try {
+        // AI SDKのレスポンスからJSONを抽出
+        const jsonMatch = fullResponse.match(/```json\s*([\s\S]*?)\s*```/) || fullResponse.match(/\{[\s\S]*\}/);
+        
+        if (jsonMatch) {
+          const jsonStr = jsonMatch[1] || jsonMatch[0];
+          const aiResponse = JSON.parse(jsonStr);
+          console.log('✅ パース成功:', aiResponse);
+          handleAIResponse(aiResponse);
+        } else {
+          // JSONが見つからない場合は通常のメッセージとして処理
+          console.log('⚠️ JSON未検出、テキストメッセージとして処理');
+          addChatMessage({
+            type: 'ai',
+            content: fullResponse,
+            timestamp: new Date().toISOString()
+          });
+        }
+      } catch (parseError) {
+        console.error('❌ JSON パースエラー:', parseError);
+        addChatMessage({
+          type: 'ai',
+          content: fullResponse,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // ローディング状態を解除
+      setIsLoading(false);
+      setIsStreaming(false);
     } catch (error) {
+      setIsLoading(false);
+      setIsStreaming(false);
+      setStreamingMessage('');
+      streamingMessageRef.current = '';
       
       let errorMessage = 'エラーが発生しました。';
       
@@ -59,8 +177,6 @@ export default function ChatBox() {
         content: `❌ ${errorMessage}`,
         timestamp: new Date().toISOString()
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -87,8 +203,8 @@ export default function ChatBox() {
         <form onSubmit={handleSubmit} className="flex gap-3">
           <div className="flex-1">
             <textarea
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="どんな服をお探しですか？例：「赤い服が欲しいです」「ビジネス用の服を探しています」"
               className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none transition-all duration-200 bg-white/90"
@@ -98,7 +214,7 @@ export default function ChatBox() {
           </div>
           <button
             type="submit"
-            disabled={!inputValue.trim() || isLoading}
+            disabled={!input.trim() || isLoading}
             className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 focus:ring-4 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all duration-200 transform hover:scale-105 disabled:hover:scale-100"
           >
             {isLoading ? (
@@ -121,7 +237,7 @@ export default function ChatBox() {
           {quickSuggestions.map((suggestion, index) => (
             <button
               key={index}
-              onClick={() => setInputValue(suggestion)}
+              onClick={() => setInput(suggestion)}
               disabled={isLoading}
               className="text-xs px-3 py-1.5 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 rounded-full hover:from-blue-100 hover:to-blue-200 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 disabled:hover:scale-100"
             >

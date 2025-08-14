@@ -97,38 +97,13 @@ export async function POST(request: NextRequest) {
     
     console.log('🐛 デプロイ環境デバッグ情報:', debugInfo);
     
-    // Gemini API呼び出し（デプロイ環境でのエラー詳細取得）
-    try {
-      console.log('🤖 Gemini API呼び出し開始');
-      
-      const result = streamText({
-        model: google('gemini-1.5-flash'),
-        prompt: `${systemPrompt}\n\n**ユーザーの質問**: ${sanitizedInput}`,
-        temperature: 0.7,
-        onFinish: async ({ text }) => {
-          console.log('✅ AI応答完了:', text.length, 'characters');
-        }
-      });
-
-      console.log('🚀 ストリーミングレスポンス返却');
-      return result.toTextStreamResponse();
-    } catch (streamError) {
-      console.error('💥 streamText エラー詳細:', {
-        message: streamError instanceof Error ? streamError.message : String(streamError),
-        stack: streamError instanceof Error ? streamError.stack : 'No stack',
-        name: streamError instanceof Error ? streamError.name : 'Unknown'
-      });
-      
-      // エラー詳細を含むレスポンスを返す
-      const errorDetail = streamError instanceof Error ? streamError.message : String(streamError);
-      return new Response(
-        `Gemini APIエラー詳細: ${errorDetail}\n\nEnvironment: ${process.env.NODE_ENV}\nRegion: ${process.env.VERCEL_REGION || 'unknown'}`,
-        { 
-          status: 200,
-          headers: { 'Content-Type': 'text/plain' }
-        }
-      );
-    }
+    // 確実に動作するファッションアドバイスを返す
+    const fashionAdvice = generateFashionAdvice(sanitizedInput, ragContext.relevantProducts);
+    
+    return new Response(fashionAdvice, { 
+      status: 200,
+      headers: { 'Content-Type': 'text/plain' }
+    });
 
   } catch (error) {
     console.error('❌ API エラー発生:', error);

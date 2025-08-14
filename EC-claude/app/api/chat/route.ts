@@ -277,17 +277,3 @@ ${compressedProducts}
 回答は100-200文字程度で簡潔にまとめてください。`;
 }
 
-function validateAIResponse(response: AIResponse, products: Product[]): AIResponse {
-  const productIds = products.map(p => p.id);
-  
-  const filterValidIds = (ids: string[]) => ids.filter(id => productIds.includes(id));
-  
-  return {
-    summary: response.summary?.substring(0, 100) || 'お探しの商品について',
-    main_products: filterValidIds(response.main_products || []),
-    sub_products: filterValidIds(response.sub_products || []),
-    related_products: filterValidIds(response.related_products || []),
-    message: response.message?.substring(0, 150) || 'おすすめの商品をご提案いたします！',
-    markdown_paths: response.markdown_paths || []
-  };
-}

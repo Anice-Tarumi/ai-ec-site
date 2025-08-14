@@ -118,12 +118,14 @@ export default function ChatBox() {
         setStreamingMessage('');
         setIsStreaming(false);
         
-        // チャット履歴に自然な回答を保存
-        addChatMessage({
-          type: 'ai',
-          content: fullResponse,
-          timestamp: new Date().toISOString()
-        });
+        // チャット履歴に自然な回答を保存（空でない場合のみ）
+        if (fullResponse.trim()) {
+          addChatMessage({
+            type: 'ai',
+            content: fullResponse,
+            timestamp: new Date().toISOString()
+          });
+        }
 
         // 商品フィルタリング用の別APIを呼び出し
         try {
@@ -160,8 +162,12 @@ export default function ChatBox() {
                 const aiResponse = JSON.parse(jsonStr);
                 console.log('✅ フィルターJSON解析成功:', aiResponse);
                 handleAIResponse(aiResponse);
+              } else {
+                console.log('⚠️ フィルターAPIでJSON未検出:', filterResult);
               }
             }
+          } else {
+            console.error('❌ フィルターAPI呼び出し失敗:', filterResponse.status, filterResponse.statusText);
           }
         } catch (filterError) {
           console.error('❌ フィルターAPI エラー:', filterError);

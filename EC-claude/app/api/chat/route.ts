@@ -3,6 +3,8 @@ import { streamText } from 'ai';
 import { google } from '@ai-sdk/google';
 import { Product } from '../../types';
 
+export const runtime = 'nodejs';
+
 function sanitizeUserInput(input: string): string {
   const dangerousPatterns = [
     /ignore\s+previous\s+instructions?/gi,

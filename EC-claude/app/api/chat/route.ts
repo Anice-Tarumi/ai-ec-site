@@ -4,6 +4,7 @@ import { google } from '@ai-sdk/google';
 
 export const runtime = 'nodejs';
 export const maxDuration = 25; // 25秒以内に処理完了
+export const revalidate = 0; // キャッシュ無効化
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,10 +33,14 @@ export async function POST(request: NextRequest) {
       throw new Error('Empty response from AI');
     }
 
+    console.log('✅ Gemini response received:', text.substring(0, 50));
+    
     return new Response(text.trim(), {
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'no-cache'
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
       }
     });
 

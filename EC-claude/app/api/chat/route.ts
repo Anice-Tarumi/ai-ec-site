@@ -103,7 +103,6 @@ export async function POST(request: NextRequest) {
         model: google('gemini-1.5-flash'),
         prompt: `簡潔に答えてください：${sanitizedInput}について30文字以内でアドバイスしてください。`,
         temperature: 0.5,
-        maxTokens: 100,
         onFinish: async ({ text }) => {
           console.log('✅ AI応答完了:', text.length, 'characters');
         }

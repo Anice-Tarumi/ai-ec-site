@@ -118,10 +118,33 @@ export async function POST(request: NextRequest) {
       });
 
       console.log('📤 ストリームレスポンス作成中');
-      const response = result.toTextStreamResponse();
-      console.log('📡 ストリームレスポンス返却完了');
       
-      return response;
+      // ストリーミングが動作しない場合のフォールバック
+      let hasContent = false;
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Streaming timeout')), 5000);
+      });
+      
+      try {
+        const response = result.toTextStreamResponse();
+        console.log('📡 ストリームレスポンス返却完了');
+        return response;
+      } catch (streamError) {
+        console.log('⚠️ ストリーミング失敗、フォールバック実行');
+        
+        // 直接テキスト取得を試行
+        const text = await result.text;
+        if (text && text.trim()) {
+          console.log('✅ フォールバックテキスト取得成功:', text.substring(0, 100));
+          return new Response(text, {
+            headers: {
+              'Content-Type': 'text/plain; charset=utf-8'
+            }
+          });
+        }
+        
+        throw streamError;
+      }
     } catch (error) {
       console.error('💥 streamText呼び出しエラー:', {
         message: error instanceof Error ? error.message : String(error),

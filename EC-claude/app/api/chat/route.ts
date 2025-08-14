@@ -106,36 +106,20 @@ export async function POST(request: NextRequest) {
     });
     
     try {
-      // まず手動でストリーミングレスポンスをテスト
-      console.log('🧪 手動ストリーミングテスト開始');
+      // Gemini APIを使った実際のストリーミング
+      console.log('🤖 Gemini APIストリーミング開始');
       
-      const encoder = new TextEncoder();
-      const testMessage = "これはストリーミングテストメッセージです。文字が一つずつ表示されることを確認します。";
-      
-      const stream = new ReadableStream({
-        start(controller) {
-          let index = 0;
-          const interval = setInterval(() => {
-            if (index < testMessage.length) {
-              controller.enqueue(encoder.encode(testMessage[index]));
-              console.log('🔤 送信文字:', testMessage[index], `(${index + 1}/${testMessage.length})`);
-              index++;
-            } else {
-              clearInterval(interval);
-              controller.close();
-              console.log('✅ 手動ストリーミング完了');
-            }
-          }, 50);
-        }
+      const result = streamText({
+        model: google('gemini-1.5-flash'),
+        prompt: `${systemPrompt}\n\n**ユーザーの質問**: ${sanitizedInput}`,
+        temperature: 0.7
       });
+
+      console.log('📤 ストリームレスポンス作成中');
+      const response = result.toTextStreamResponse();
+      console.log('📡 ストリームレスポンス返却完了');
       
-      return new Response(stream, {
-        headers: {
-          'Content-Type': 'text/plain; charset=utf-8',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-        },
-      });
+      return response;
     } catch (error) {
       console.error('💥 streamText呼び出しエラー:', {
         message: error instanceof Error ? error.message : String(error),

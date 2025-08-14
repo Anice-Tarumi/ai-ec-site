@@ -16,41 +16,6 @@ export default function ChatBox() {
     setIsStreaming
   } = useStore();
 
-  // const { messages, sendMessage, stop } = useChat({
-  //   onFinish: (message: any) => {
-  //     setIsLoading(false);
-  //     setIsStreaming(false);
-  //     setStreamingMessage('');
-  //     streamingMessageRef.current = '';
-      
-  //     // AI応答をパースしてストアに保存
-  //     try {
-  //       const content = message.content;
-  //       const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/\{[\s\S]*\}/);
-        
-  //       if (jsonMatch) {
-  //         const jsonStr = jsonMatch[1] || jsonMatch[0];
-  //         const aiResponse = JSON.parse(jsonStr);
-  //         handleAIResponse(aiResponse);
-  //       } else {
-  //         // JSONが見つからない場合は通常のメッセージとして処理
-  //         addChatMessage({
-  //           type: 'ai',
-  //           content: content,
-  //           timestamp: new Date().toISOString()
-  //         });
-  //       }
-  //     } catch (error) {
-  //       console.error('Failed to parse AI response:', error);
-  //       addChatMessage({
-  //         type: 'ai',
-  //         content: message.content,
-  //         timestamp: new Date().toISOString()
-  //       });
-  //     }
-  //   }
-  // });
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -100,6 +65,7 @@ export default function ChatBox() {
 
       const decoder = new TextDecoder();
       let fullResponse = '';
+      let displayedLength = 0;
 
       try {
         let readCount = 0;
@@ -114,48 +80,96 @@ export default function ChatBox() {
           fullResponse += chunk;
           console.log('📝 受信チャンク:', chunk.substring(0, 100) + (chunk.length > 100 ? '...' : ''));
           
-          // ストリーミング表示用（リアルタイム更新）
-          setStreamingMessage(fullResponse);
+          // 文字ごとのストリーミング表示
+          const displayCharacters = () => {
+            if (displayedLength < fullResponse.length) {
+              displayedLength++;
+              
+              let displayText = fullResponse.substring(0, displayedLength);
+              setStreamingMessage(displayText);
+              setTimeout(displayCharacters, 50);
+            }
+          };
+          
+          // 新しいチャンクが来たら文字表示開始
+          displayCharacters();
         }
+        
+        // 残りの文字も表示
+        const finishDisplay = () => {
+          if (displayedLength < fullResponse.length) {
+            displayedLength++;
+            
+            let displayText = fullResponse.substring(0, displayedLength);
+            setStreamingMessage(displayText);
+            setTimeout(finishDisplay, 50);
+          }
+        };
+        finishDisplay();
+        
         console.log('✅ ストリーミング読み取り完了');
         console.log('📊 最終レスポンス:', fullResponse);
       } finally {
         reader.releaseLock();
       }
 
-      // 最終レスポンスの処理
-      setStreamingMessage('');
-      
-      try {
-        // AI SDKのレスポンスからJSONを抽出
-        const jsonMatch = fullResponse.match(/```json\s*([\s\S]*?)\s*```/) || fullResponse.match(/\{[\s\S]*\}/);
+      // ストリーミング完了後、フィルターAPIを呼び出し
+      setTimeout(async () => {
+        setStreamingMessage('');
+        setIsStreaming(false);
         
-        if (jsonMatch) {
-          const jsonStr = jsonMatch[1] || jsonMatch[0];
-          const aiResponse = JSON.parse(jsonStr);
-          console.log('✅ パース成功:', aiResponse);
-          handleAIResponse(aiResponse);
-        } else {
-          // JSONが見つからない場合は通常のメッセージとして処理
-          console.log('⚠️ JSON未検出、テキストメッセージとして処理');
-          addChatMessage({
-            type: 'ai',
-            content: fullResponse,
-            timestamp: new Date().toISOString()
-          });
-        }
-      } catch (parseError) {
-        console.error('❌ JSON パースエラー:', parseError);
+        // チャット履歴に自然な回答を保存
         addChatMessage({
           type: 'ai',
           content: fullResponse,
           timestamp: new Date().toISOString()
         });
-      }
+
+        // 商品フィルタリング用の別APIを呼び出し
+        try {
+          console.log('🔍 商品フィルターAPI呼び出し開始');
+          const filterResponse = await fetch('/api/filter', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userInput: userMessage,
+              products: products
+            })
+          });
+
+          if (filterResponse.ok) {
+            const filterReader = filterResponse.body?.getReader();
+            if (filterReader) {
+              const filterDecoder = new TextDecoder();
+              let filterResult = '';
+
+              while (true) {
+                const { done, value } = await filterReader.read();
+                if (done) break;
+                filterResult += filterDecoder.decode(value);
+              }
+
+              console.log('📊 フィルター結果:', filterResult);
+              
+              // JSONを解析して商品フィルタリング実行
+              const jsonMatch = filterResult.match(/```json\s*([\s\S]*?)\s*```/) || filterResult.match(/\{[\s\S]*\}/);
+              if (jsonMatch) {
+                const jsonStr = jsonMatch[1] || jsonMatch[0];
+                const aiResponse = JSON.parse(jsonStr);
+                console.log('✅ フィルターJSON解析成功:', aiResponse);
+                handleAIResponse(aiResponse);
+              }
+            }
+          }
+        } catch (filterError) {
+          console.error('❌ フィルターAPI エラー:', filterError);
+        }
+      }, 2000); // 2秒間表示してから処理
 
       // ローディング状態を解除
       setIsLoading(false);
-      setIsStreaming(false);
     } catch (error) {
       setIsLoading(false);
       setIsStreaming(false);

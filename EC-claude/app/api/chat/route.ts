@@ -158,13 +158,28 @@ export async function POST(request: NextRequest) {
 function performRAGSearch(input: string, products: Product[]): RAGContext {
   const lowerInput = input.toLowerCase();
   
+  // 色キーワードの検出
+  const colorKeywords = ['黒', '白', '赤', '青', '緑', '黄', 'ピンク', 'グレー', 'ネイビー', 'ベージュ', 'ブラウン'];
+  const requestedColors = colorKeywords.filter(color => lowerInput.includes(color));
+  
   const scoredProducts = products.map(p => {
     let score = 0;
+    
+    // 色の厳密フィルタリング
+    if (requestedColors.length > 0) {
+      const hasRequestedColor = requestedColors.some(color => 
+        p.color.some(productColor => productColor.includes(color))
+      );
+      if (hasRequestedColor) {
+        score += 12; // 指定色があれば最高スコア
+      } else {
+        score -= 3;  // 指定色がなければマイナス
+      }
+    }
     
     // 完全一致に高いスコア
     if (p.name.toLowerCase().includes(lowerInput)) score += 10;
     if (p.category.some(cat => cat.toLowerCase().includes(lowerInput))) score += 8;
-    if (p.color.some(color => color.toLowerCase().includes(lowerInput))) score += 6;
     if (p.keywords.some(keyword => keyword.toLowerCase().includes(lowerInput))) score += 5;
     
     // 部分一致に中程度のスコア
@@ -180,11 +195,11 @@ function performRAGSearch(input: string, products: Product[]): RAGContext {
     return { product: p, score };
   });
   
-  // スコア順でソートして関連度の高い商品を選出
+  // スコア順でソートして関連度の高い商品を選出（より厳しいフィルタ）
   const relevantProducts = scoredProducts
-    .filter(item => item.score > 0)
+    .filter(item => item.score > 2)  // より厳しいフィルタリング
     .sort((a, b) => b.score - a.score)
-    .slice(0, 20)
+    .slice(0, 15)  // 20から15に減らして精度向上
     .map(item => item.product);
     
   // 関連商品がない場合は人気商品を表示
@@ -202,48 +217,64 @@ function performRAGSearch(input: string, products: Product[]): RAGContext {
 
 // システムプロンプト生成
 function createSystemPrompt(ragContext: RAGContext, userInput: string): string {
-  const compressedProducts = ragContext.relevantProducts.map(p => 
-    `${p.id}|${p.name}|${p.brand}|${p.category.join(',')}|${p.color.join(',')}|${p.material}|${p.keywords.join(',')}|${p.target}|${p.scene}|¥${p.price}`
-  ).join('\n');
+  // ユーザーの色指定を検出
+  const lowerInput = userInput.toLowerCase();
+  const colorKeywords = ['黒', '白', '赤', '青', '緑', '黄', 'ピンク', 'グレー', 'ネイビー', 'ベージュ', 'ブラウン'];
+  const requestedColors = colorKeywords.filter(color => lowerInput.includes(color));
   
-  return `あなたは経験豊富なファッションアドバイザーです。RAGシステムで選出された関連商品から、以下の基準で分類してください：
+  const compressedProducts = ragContext.relevantProducts.map(p => {
+    // 指定色がある場合、その色を優先表示
+    let colorInfo = p.color.join(',');
+    if (requestedColors.length > 0) {
+      const matchingColors = p.color.filter(c => 
+        requestedColors.some(requested => c.includes(requested))
+      );
+      if (matchingColors.length > 0) {
+        colorInfo = matchingColors.join(',') + `(${p.color.join(',')}展開)`;
+      }
+    }
+    
+    return `${p.id}|${p.name}|${p.brand}|${p.category.join(',')}|${colorInfo}|${p.material}|${p.keywords.join(',')}|${p.target}|${p.scene}|¥${p.price}`;
+  }).join('\n');
+  
+  const colorInstruction = requestedColors.length > 0 
+    ? `\n**カラーコーディネート指針**: ユーザーは「${requestedColors.join('、')}」色を中心としたスタイリングを希望しています。以下の観点で提案してください：
+    - メイン商品：指定色の商品を中心に
+    - コーディネート商品：指定色と調和する色合い（補色・同系色・アクセントカラー）
+    - 関連商品：トータルコーディネートを考慮した提案
+    - 必ず各商品を選んだ理由とコーディネートのポイントを説明してください`
+    : '';
+  
+  return `あなたは10年以上の経験を持つプロのファッションスタイリストです。以下のファッション知識を活用してください：
 
-**商品分類基準：**
-1. **main_products**: ユーザーの要望に最も適合する商品（3-5点）
-   - 指定された色・アイテム・スタイルに最も適合
-   - 価格帯や年齢層もユーザーの要望に合致
-   - 用途・シーンが一致
+**色彩理論**:
+- モノトーン（黒白グレー）: 洗練・クール・大人っぽい
+- 補色（赤×緑、青×オレンジ）: インパクト・個性的
+- 同系色: 統一感・上品・落ち着き
+- アクセントカラー: 小物で差し色
 
-2. **sub_products**: main_productsと組み合わせできるコーディネート商品（3-8点）
-   - 色の相性（同系色・補色・モノトーン・アクセントカラー）
-   - スタイル統一（フォーマル、カジュアル、エレガント等）
-   - シーン適合性（オフィス、デート、普段着等）
-   - レイヤリングや組み合わせが可能
+**スタイリング原則**:
+- 対比の法則: タイト×ルーズ、フォーマル×カジュアル
+- 3色ルール: 基本色2色+アクセント1色
+- 縦ラインで細見え、横ラインでボリューム
+- 季節感: 春夏は軽やか、秋冬は重厚感
 
-3. **related_products**: 代替案や類似商品（2-5点）
-   - 同じカテゴリで異なる色・デザイン・価格帯
-   - 似たターゲット層・用途
-   - 季節やトレンドを考慮した選択肢
+**シーン別アプローチ**:
+- オフィス: 品格・信頼感・清潔感
+- デート: 女性らしさ・上品さ・親しみやすさ  
+- カジュアル: リラックス・動きやすさ・個性
 
-**RAGで選出された関連商品データ（関連度順）：**
+単なる商品紹介ではなく、「なぜその組み合わせなのか」「どんな印象を与えるか」「どう着こなすか」まで考えて提案してください。${colorInstruction}
+
+**検索された関連商品（関連度順）：**
 ${compressedProducts}
 
 **検索スコア**: ${ragContext.searchScore.toFixed(2)}
 **関連商品数**: ${ragContext.relevantProducts.length}点
 
-以下のJSON形式で回答してください：
-\`\`\`json
-{
-  "summary": "ユーザーの要望を30文字以内で要約",
-  "main_products": ["最適な商品ID"],
-  "sub_products": ["コーディネート商品ID"],
-  "related_products": ["関連・代替商品ID"],
-  "message": "選択理由とスタイリング提案を100文字以内で",
-  "markdown_paths": []
-}
-\`\`\`
-
-提供された商品IDのみを使用し、より精度の高い分類を行ってください。`;
+ユーザーの要望に対して、自然で親しみやすい文章でファッションアドバイスを提供してください。
+商品の具体的な紹介や着こなし方法、コーディネートのポイントを分かりやすく説明してください。
+回答は100-200文字程度で簡潔にまとめてください。`;
 }
 
 function validateAIResponse(response: AIResponse, products: Product[]): AIResponse {

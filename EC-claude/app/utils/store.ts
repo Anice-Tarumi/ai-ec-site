@@ -30,19 +30,12 @@ const useStore = create<StoreState>((set, get) => ({
       const subProducts = findProductsByIds(response.sub_products);
       const relatedProducts = findProductsByIds(response.related_products);
 
-      const aiMessage: ChatMessage = {
-        type: 'ai',
-        content: response.message,
-        timestamp: new Date().toISOString(),
-      };
-
       return {
         mainProducts,
         subProducts,
         relatedProducts,
         currentSummary: response.summary,
         currentMarkdownPaths: response.markdown_paths,
-        chatMessages: [...state.chatMessages, aiMessage],
       };
     }),
 

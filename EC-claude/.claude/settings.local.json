@@ -25,7 +25,10 @@
       "WebFetch(domain:ai-sdk.dev)",
       "Bash(npx tsc:*)",
       "Bash(find:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(docker compose:*)",
+      "Bash(touch:*)",
+      "Bash(kill:*)"
     ],
     "deny": []
   }

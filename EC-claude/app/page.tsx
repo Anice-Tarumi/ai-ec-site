@@ -19,6 +19,7 @@ export default function Home() {
     isLoading, 
     streamingMessage,
     isStreaming,
+    chatMessages,
     setAllProducts,
     setVectorSearch
   } = useStore();
@@ -68,7 +69,7 @@ export default function Home() {
 
       <main className="max-w-7xl mx-auto px-4 py-8 pb-32">
 
-        <Banner />
+        {/* <Banner /> */}
         {isLoading && (
           <div className="flex flex-col justify-center items-center py-16 animate-pulse">
             <div className="relative">
@@ -86,18 +87,63 @@ export default function Home() {
           </div>
         )}
 
-        {/* ストリーミング中のAI回答表示 */}
-        {isStreaming && streamingMessage && (
-          <div className="mb-8 animate-fade-in-up">
-            <div className="bg-gradient-to-r from-blue-100 to-purple-100 rounded-xl p-6 shadow-sm border border-blue-200">
-              <h2 className="text-lg font-semibold text-gray-800 mb-2">
-                🤖 AIが回答中...
-              </h2>
-              <p className="text-gray-700 whitespace-pre-wrap min-h-[1.5rem]">
-                {streamingMessage}
-                <span className="animate-pulse text-blue-500">|</span>
-              </p>
-            </div>
+        {/* チャット履歴表示 */}
+        {(chatMessages.length > 0 || (isStreaming && streamingMessage)) && (
+          <div className="mb-8 space-y-4">
+            {/* 過去のチャット履歴 */}
+            {chatMessages.map((message, index) => (
+              <div key={index} className="animate-fade-in-up">
+                <div className={`rounded-xl p-4 shadow-sm border ${
+                  message.type === 'user' 
+                    ? 'bg-white border-gray-200 ml-12' 
+                    : 'bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 mr-12'
+                }`}>
+                  <div className="flex items-start space-x-3">
+                    <div className="flex-shrink-0">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        message.type === 'user' 
+                          ? 'bg-gray-100 text-gray-600' 
+                          : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
+                      }`}>
+                        {message.type === 'user' ? '👤' : '🤖'}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                        {message.content}
+                      </p>
+                      <span className="text-xs text-gray-500 mt-2 block">
+                        {new Date(message.timestamp).toLocaleTimeString('ja-JP')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            {/* ストリーミング中のAI回答表示 */}
+            {isStreaming && streamingMessage && (
+              <div className="animate-fade-in-up">
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 shadow-sm border border-blue-200 mr-12">
+                  <div className="flex items-start space-x-3">
+                    <div className="flex-shrink-0">
+                      <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white">
+                        🤖
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                        {streamingMessage}
+                        <span className="animate-pulse text-blue-500">|</span>
+                      </p>
+                      <span className="text-xs text-gray-500 mt-2 block">
+                        回答中...
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

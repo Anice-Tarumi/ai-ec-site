@@ -190,10 +190,15 @@ function performRAGSearch(input: string, products: Product[]): RAGContext {
   const scoredProducts = products.map(p => {
     let score = 0;
     
+    // 安全な配列チェック
+    const colors = Array.isArray(p.color) ? p.color : [];
+    const categories = Array.isArray(p.category) ? p.category : [];
+    const keywords = Array.isArray(p.keywords) ? p.keywords : [];
+    
     // 色の厳密フィルタリング
     if (requestedColors.length > 0) {
       const hasRequestedColor = requestedColors.some(color => 
-        p.color.some(productColor => productColor.includes(color))
+        colors.some(productColor => productColor.includes(color))
       );
       if (hasRequestedColor) {
         score += 12; // 指定色があれば最高スコア
@@ -203,16 +208,16 @@ function performRAGSearch(input: string, products: Product[]): RAGContext {
     }
     
     // 完全一致に高いスコア
-    if (p.name.toLowerCase().includes(lowerInput)) score += 10;
-    if (p.category.some(cat => cat.toLowerCase().includes(lowerInput))) score += 8;
-    if (p.keywords.some(keyword => keyword.toLowerCase().includes(lowerInput))) score += 5;
+    if (p.name && p.name.toLowerCase().includes(lowerInput)) score += 10;
+    if (categories.some(cat => cat.toLowerCase().includes(lowerInput))) score += 8;
+    if (keywords.some(keyword => keyword.toLowerCase().includes(lowerInput))) score += 5;
     
     // 部分一致に中程度のスコア
-    if (p.brand.toLowerCase().includes(lowerInput)) score += 4;
-    if (p.material.toLowerCase().includes(lowerInput)) score += 3;
-    if (p.target.toLowerCase().includes(lowerInput)) score += 3;
-    if (p.scene.toLowerCase().includes(lowerInput)) score += 3;
-    if (p.description.toLowerCase().includes(lowerInput)) score += 2;
+    if (p.brand && p.brand.toLowerCase().includes(lowerInput)) score += 4;
+    if (p.material && p.material.toLowerCase().includes(lowerInput)) score += 3;
+    if (p.target && p.target.toLowerCase().includes(lowerInput)) score += 3;
+    if (p.scene && p.scene.toLowerCase().includes(lowerInput)) score += 3;
+    if (p.description && p.description.toLowerCase().includes(lowerInput)) score += 2;
     
     // 季節・新商品ボーナス
     if (p.is_new) score += 1;
@@ -248,18 +253,23 @@ function createSystemPrompt(ragContext: RAGContext, userInput: string): string {
   const requestedColors = colorKeywords.filter(color => lowerInput.includes(color));
   
   const compressedProducts = ragContext.relevantProducts.map(p => {
+    // 安全な配列チェック
+    const colors = Array.isArray(p.color) ? p.color : [];
+    const categories = Array.isArray(p.category) ? p.category : [];
+    const keywords = Array.isArray(p.keywords) ? p.keywords : [];
+    
     // 指定色がある場合、その色を優先表示
-    let colorInfo = p.color.join(',');
+    let colorInfo = colors.join(',');
     if (requestedColors.length > 0) {
-      const matchingColors = p.color.filter(c => 
+      const matchingColors = colors.filter(c => 
         requestedColors.some(requested => c.includes(requested))
       );
       if (matchingColors.length > 0) {
-        colorInfo = matchingColors.join(',') + `(${p.color.join(',')}展開)`;
+        colorInfo = matchingColors.join(',') + `(${colors.join(',')}展開)`;
       }
     }
     
-    return `${p.id}|${p.name}|${p.brand}|${p.category.join(',')}|${colorInfo}|${p.material}|${p.keywords.join(',')}|${p.target}|${p.scene}|¥${p.price}`;
+    return `${p.id}|${p.name || ''}|${p.brand || ''}|${categories.join(',')}|${colorInfo}|${p.material || ''}|${keywords.join(',')}|${p.target || ''}|${p.scene || ''}|¥${p.price || 0}`;
   }).join('\n');
   
   const colorInstruction = requestedColors.length > 0 

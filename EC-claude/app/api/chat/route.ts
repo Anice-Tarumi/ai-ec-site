@@ -97,13 +97,54 @@ export async function POST(request: NextRequest) {
     
     console.log('🐛 デプロイ環境デバッグ情報:', debugInfo);
     
-    // 確実に動作するファッションアドバイスを返す
-    const fashionAdvice = generateFashionAdvice(sanitizedInput, ragContext.relevantProducts);
-    
-    return new Response(fashionAdvice, { 
-      status: 200,
-      headers: { 'Content-Type': 'text/plain' }
+    // Gemini API詳細デバッグ
+    console.log('🤖 Gemini API呼び出し開始', {
+      modelName: 'gemini-1.5-flash',
+      promptLength: systemPrompt.length,
+      hasApiKey: !!process.env.GEMINI_API_KEY,
+      apiKeyStart: process.env.GEMINI_API_KEY?.substring(0, 10)
     });
+    
+    try {
+      const result = streamText({
+        model: google('gemini-1.5-flash'),
+        prompt: `${systemPrompt}\n\n**ユーザーの質問**: ${sanitizedInput}`,
+        temperature: 0.7,
+        onStart: () => {
+          console.log('🚀 Gemini APIストリーミング開始');
+        },
+        onFinish: async ({ text, finishReason }) => {
+          console.log('✅ AI応答完了:', { 
+            textLength: text.length, 
+            finishReason,
+            textPreview: text.substring(0, 100)
+          });
+        },
+        onError: (error) => {
+          console.error('💥 Gemini APIエラー:', error);
+        }
+      });
+
+      console.log('📤 ストリームレスポンス作成中');
+      const response = result.toTextStreamResponse();
+      console.log('📡 ストリームレスポンス返却', {
+        hasResponse: !!response,
+        responseType: typeof response
+      });
+      
+      return response;
+    } catch (error) {
+      console.error('💥 streamText呼び出しエラー:', {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        errorType: error?.constructor?.name
+      });
+      
+      return new Response(
+        `Gemini APIエラー: ${error instanceof Error ? error.message : String(error)}`,
+        { status: 500, headers: { 'Content-Type': 'text/plain' } }
+      );
+    }
 
   } catch (error) {
     console.error('❌ API エラー発生:', error);

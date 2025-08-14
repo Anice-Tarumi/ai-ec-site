@@ -116,7 +116,8 @@ export async function POST(request: NextRequest) {
       const response = result.toTextStreamResponse();
       console.log('📡 ストリームレスポンス返却', {
         hasResponse: !!response,
-        responseType: typeof response
+        responseType: typeof response,
+        headers: Object.fromEntries(response.headers.entries())
       });
       
       return response;

@@ -28,7 +28,9 @@
       "Bash(curl:*)",
       "Bash(docker compose:*)",
       "Bash(touch:*)",
-      "Bash(kill:*)"
+      "Bash(kill:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": []
   }

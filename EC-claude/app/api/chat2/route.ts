@@ -17,13 +17,21 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('🚀 NEW ENDPOINT - Processing:', userInput);
+    console.log('🔑 API Key check:', {
+      hasKey: !!process.env.GEMINI_API_KEY,
+      hasGoogleKey: !!process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+      keyStart: process.env.GEMINI_API_KEY?.substring(0, 10) || 'No key'
+    });
+
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    if (!apiKey) {
+      throw new Error('API key not found in environment variables');
+    }
 
     const prompt = `ファッションアドバイザーとして「${userInput}」について100文字程度で具体的なアドバイスをしてください。`;
 
     const { text } = await generateText({
-      model: google('gemini-1.5-flash', {
-        apiKey: process.env.GEMINI_API_KEY,
-      }),
+      model: google('gemini-1.5-flash', { apiKey }),
       prompt: prompt,
       temperature: 0.7,
     });

@@ -58,59 +58,27 @@ export default function ChatBox() {
       
       console.log('✅ API応答受信:', response.status);
 
-      // ストリーミングレスポンスの処理
-      console.log('📖 ストリーミング読み取り開始');
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('ストリームの読み取りができませんでした');
+      // 一括回答の処理
+      console.log('📖 回答取得開始');
+      const fullResponse = await response.text();
+      console.log('✅ AI回答取得完了:', fullResponse.substring(0, 100));
 
-      const decoder = new TextDecoder();
-      let fullResponse = '';
-      let displayedLength = 0;
-
-      try {
-        let readCount = 0;
-        while (true) {
-          const { done, value } = await reader.read();
-          readCount++;
-          console.log(`📚 ストリーミング読み取り #${readCount}:`, done, value?.length);
-          
-          if (done) break;
-
-          const chunk = decoder.decode(value);
-          fullResponse += chunk;
-          console.log('📝 受信チャンク:', chunk.substring(0, 100) + (chunk.length > 100 ? '...' : ''));
-          
-          // 受信したチャンクを即座に表示
-          setStreamingMessage(fullResponse);
-        }
-        
-        // 最終的に全文表示を確実にする
-        setStreamingMessage(fullResponse);
-        
-        console.log('✅ ストリーミング読み取り完了');
-        console.log('📊 最終レスポンス:', fullResponse);
-      } finally {
-        reader.releaseLock();
+      // 回答完了後、フィルターAPIを呼び出し
+      setIsStreaming(false);
+      
+      // チャット履歴に回答を保存（空でない場合のみ）
+      if (fullResponse.trim()) {
+        addChatMessage({
+          type: 'ai',
+          content: fullResponse,
+          timestamp: new Date().toISOString()
+        });
       }
 
-      // ストリーミング完了後、フィルターAPIを呼び出し
-      setTimeout(async () => {
-        setStreamingMessage('');
-        setIsStreaming(false);
-        
-        // チャット履歴に自然な回答を保存（空でない場合のみ）
-        if (fullResponse.trim()) {
-          addChatMessage({
-            type: 'ai',
-            content: fullResponse,
-            timestamp: new Date().toISOString()
-          });
-        }
-
-        // 商品フィルタリング用の別APIを呼び出し
-        try {
-          console.log('🔍 商品フィルターAPI呼び出し開始');
-          const filterResponse = await fetch('/api/filter', {
+      // 商品フィルタリング用の別APIを呼び出し
+      try {
+        console.log('🔍 商品フィルターAPI呼び出し開始');
+        const filterResponse = await fetch('/api/filter', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -122,37 +90,25 @@ export default function ChatBox() {
           });
 
           if (filterResponse.ok) {
-            const filterReader = filterResponse.body?.getReader();
-            if (filterReader) {
-              const filterDecoder = new TextDecoder();
-              let filterResult = '';
-
-              while (true) {
-                const { done, value } = await filterReader.read();
-                if (done) break;
-                filterResult += filterDecoder.decode(value);
-              }
-
-              console.log('📊 フィルター結果:', filterResult);
+            const filterResult = await filterResponse.text();
+            console.log('📊 フィルター結果:', filterResult);
               
-              // JSONを解析して商品フィルタリング実行
-              const jsonMatch = filterResult.match(/```json\s*([\s\S]*?)\s*```/) || filterResult.match(/\{[\s\S]*\}/);
-              if (jsonMatch) {
-                const jsonStr = jsonMatch[1] || jsonMatch[0];
-                const aiResponse = JSON.parse(jsonStr);
-                console.log('✅ フィルターJSON解析成功:', aiResponse);
-                handleAIResponse(aiResponse);
-              } else {
-                console.log('⚠️ フィルターAPIでJSON未検出:', filterResult);
-              }
+            // JSONを解析して商品フィルタリング実行
+            const jsonMatch = filterResult.match(/```json\s*([\s\S]*?)\s*```/) || filterResult.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const jsonStr = jsonMatch[1] || jsonMatch[0];
+              const aiResponse = JSON.parse(jsonStr);
+              console.log('✅ フィルターJSON解析成功:', aiResponse);
+              handleAIResponse(aiResponse);
+            } else {
+              console.log('⚠️ フィルターAPIでJSON未検出:', filterResult);
             }
           } else {
             console.error('❌ フィルターAPI呼び出し失敗:', filterResponse.status, filterResponse.statusText);
           }
-        } catch (filterError) {
-          console.error('❌ フィルターAPI エラー:', filterError);
-        }
-      }, 2000); // 2秒間表示してから処理
+      } catch (filterError) {
+        console.error('❌ フィルターAPI エラー:', filterError);
+      }
 
       // ローディング状態を解除
       setIsLoading(false);

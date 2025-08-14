@@ -108,8 +108,8 @@ export async function POST(request: NextRequest) {
     });
     
     try {
-      // Gemini APIを使った実際のストリーミング
-      console.log('🤖 Gemini APIストリーミング開始');
+      // Gemini APIで一括回答取得
+      console.log('🤖 Gemini API呼び出し開始');
       
       const result = streamText({
         model: google('gemini-1.5-flash'),
@@ -117,33 +117,18 @@ export async function POST(request: NextRequest) {
         temperature: 0.7
       });
 
-      console.log('📤 ストリームレスポンス作成中');
+      console.log('📝 テキスト取得中');
+      const text = await result.text;
       
-      // ストリーミングが動作しない場合のフォールバック
-      let hasContent = false;
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Streaming timeout')), 5000);
-      });
-      
-      try {
-        const response = result.toTextStreamResponse();
-        console.log('📡 ストリームレスポンス返却完了');
-        return response;
-      } catch (streamError) {
-        console.log('⚠️ ストリーミング失敗、フォールバック実行');
-        
-        // 直接テキスト取得を試行
-        const text = await result.text;
-        if (text && text.trim()) {
-          console.log('✅ フォールバックテキスト取得成功:', text.substring(0, 100));
-          return new Response(text, {
-            headers: {
-              'Content-Type': 'text/plain; charset=utf-8'
-            }
-          });
-        }
-        
-        throw streamError;
+      if (text && text.trim()) {
+        console.log('✅ AI回答取得成功:', text.substring(0, 100));
+        return new Response(text, {
+          headers: {
+            'Content-Type': 'text/plain; charset=utf-8'
+          }
+        });
+      } else {
+        throw new Error('空の回答が返されました');
       }
     } catch (error) {
       console.error('💥 streamText呼び出しエラー:', {

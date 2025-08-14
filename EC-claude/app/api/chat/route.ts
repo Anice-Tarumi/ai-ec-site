@@ -16,7 +16,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 簡潔なプロンプト
+    // 簡潔なプロンプト（デプロイ確認用ログ追加）
+    console.log('🚀 NEW API VERSION - Gemini call starting for:', userInput);
     const prompt = `ファッションアドバイザーとして「${userInput}」について100文字程度で具体的なアドバイスをしてください。`;
 
     // Gemini APIを使って一括生成（ストリーミングなし）

@@ -61,14 +61,10 @@ export async function POST(request: NextRequest) {
 
     if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'your_gemini_api_key_here') {
       return new Response(
-        JSON.stringify({ 
-          error: 'Gemini API key is not configured',
-          message: 'APIキーが設定されていません。.env.localファイルに正しいGeminiAPIキーを設定してください。',
-          details: 'https://makersuite.google.com/app/apikey からAPIキーを取得してください。'
-        }),
+        `APIキーが設定されていません。Vercelの環境変数でGEMINI_API_KEYを設定してください。\n\n現在の設定: ${process.env.GEMINI_API_KEY ? 'キーあり' : 'キーなし'}`,
         { 
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
+          status: 200,
+          headers: { 'Content-Type': 'text/plain' }
         }
       );
     }

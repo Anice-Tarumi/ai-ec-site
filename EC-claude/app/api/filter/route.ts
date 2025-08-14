@@ -84,24 +84,25 @@ export async function POST(request: NextRequest) {
     const systemPrompt = createFilterPrompt(ragContext, sanitizedInput);
     console.log('📝 フィルタープロンプト生成完了');
 
-    console.log('🤖 Gemini API呼び出し開始');
+    console.log('🤖 Filter API呼び出し開始');
     
-    try {
-      const result = streamText({
-        model: google('gemini-1.5-flash'),
-        prompt: `${systemPrompt}\n\n**ユーザーの質問**: ${sanitizedInput}`,
-        temperature: 0.3,
-        onFinish: async ({ text }) => {
-          console.log('✅ Filter AI応答完了:', text.length, 'characters');
-        }
-      });
-
-      console.log('🚀 フィルターレスポンス返却');
-      return result.toTextStreamResponse();
-    } catch (streamError) {
-      console.error('💥 streamText エラー:', streamError);
-      throw streamError;
-    }
+    // デバッグ用：固定JSONレスポンスを返す
+    return new Response(
+      `\`\`\`json
+{
+  "summary": "赤い服を探しています",
+  "main_products": ["test1"],
+  "sub_products": [],
+  "related_products": [],
+  "message": "デバッグ用の固定レスポンス",
+  "markdown_paths": []
+}
+\`\`\``,
+      { 
+        status: 200,
+        headers: { 'Content-Type': 'text/plain' }
+      }
+    );
 
   } catch (error) {
     console.error('❌ Filter API エラー発生:', error);

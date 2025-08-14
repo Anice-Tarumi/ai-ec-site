@@ -44,10 +44,10 @@ interface RAGContext {
 }
 
 export async function POST(request: NextRequest) {
-  console.log('🚀 API リクエスト受信');
+  console.log('🚀 Chat API リクエスト受信');
   try {
     const { userInput, products }: { userInput: string; products: Product[] } = await request.json();
-    console.log('📝 リクエストデータ:', { userInput, productsCount: products?.length });
+    console.log('📝 Chat リクエストデータ:', { userInput, productsCount: products?.length });
 
     if (!userInput || !products) {
       return new Response(
@@ -86,14 +86,24 @@ export async function POST(request: NextRequest) {
       keyPrefix: process.env.GEMINI_API_KEY?.substring(0, 10)
     });
 
-    // AI SDKのstreamTextを使用してストリーミング実装
-    console.log('🤖 Gemini API呼び出し開始');
+    // デプロイ環境でのデバッグ: 環境情報を含むレスポンス
+    const debugInfo = {
+      hasApiKey: !!process.env.GEMINI_API_KEY,
+      keyLength: process.env.GEMINI_API_KEY?.length,
+      nodeEnv: process.env.NODE_ENV,
+      vercelRegion: process.env.VERCEL_REGION,
+      runtime: process.env.AWS_EXECUTION_ENV || 'unknown'
+    };
+    
+    console.log('🐛 デプロイ環境デバッグ情報:', debugInfo);
     
     try {
+      // まずテスト用の簡単なプロンプトで試す
       const result = streamText({
         model: google('gemini-1.5-flash'),
-        prompt: `${systemPrompt}\n\n**ユーザーの質問**: ${sanitizedInput}`,
-        temperature: 0.7,
+        prompt: `簡潔に答えてください：${sanitizedInput}について30文字以内でアドバイスしてください。`,
+        temperature: 0.5,
+        maxTokens: 100,
         onFinish: async ({ text }) => {
           console.log('✅ AI応答完了:', text.length, 'characters');
         }
@@ -104,10 +114,10 @@ export async function POST(request: NextRequest) {
     } catch (streamError) {
       console.error('💥 streamText エラー:', streamError);
       
-      // エラー時はデバッグ情報を返す
+      // エラー詳細とデバッグ情報を返す
       const errorMessage = streamError instanceof Error ? streamError.message : String(streamError);
       return new Response(
-        `Gemini APIエラー: ${errorMessage}\n\nAPIキー長: ${process.env.GEMINI_API_KEY?.length}`,
+        `Gemini APIエラー: ${errorMessage}\n\nデバッグ情報: ${JSON.stringify(debugInfo, null, 2)}`,
         { 
           status: 200,
           headers: { 'Content-Type': 'text/plain' }

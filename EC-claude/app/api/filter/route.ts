@@ -86,39 +86,36 @@ export async function POST(request: NextRequest) {
 
     console.log('🤖 Filter API呼び出し開始');
     
-    try {
-      const result = streamText({
-        model: google('gemini-1.5-flash'),
-        prompt: `${systemPrompt}\n\n**ユーザーの質問**: ${sanitizedInput}`,
-        temperature: 0.3,
-        onFinish: async ({ text }) => {
-          console.log('✅ Filter AI応答完了:', text.length, 'characters');
-        }
-      });
+    // デプロイ環境での回避策: ローカル商品フィルタリング
+    const colorKeywords = ['黒', '白', '赤', '青', '緑', '黄', 'ピンク', 'グレー', 'ネイビー', 'ベージュ', 'ブラウン'];
+    const requestedColors = colorKeywords.filter(color => sanitizedInput.includes(color));
+    
+    // 色に基づく簡単なフィルタリング
+    const matchingProducts = ragContext.relevantProducts.filter(p => {
+      if (requestedColors.length > 0) {
+        return requestedColors.some(color => 
+          p.color.some(productColor => productColor.includes(color))
+        );
+      }
+      return true;
+    });
 
-      console.log('🚀 フィルターレスポンス返却');
-      return result.toTextStreamResponse();
-    } catch (streamError) {
-      console.error('💥 Filter streamText エラー:', streamError);
-      
-      // エラー時は固定JSONを返す
-      return new Response(
-        `\`\`\`json
-{
-  "summary": "エラーが発生しました",
-  "main_products": [],
-  "sub_products": [],
-  "related_products": [],
-  "message": "フィルターAPIでエラーが発生しました",
-  "markdown_paths": []
-}
-\`\`\``,
-        { 
-          status: 200,
-          headers: { 'Content-Type': 'text/plain' }
-        }
-      );
-    }
+    const responseData = {
+      summary: `${sanitizedInput}の検索結果`,
+      main_products: matchingProducts.slice(0, 3).map(p => p.id),
+      sub_products: matchingProducts.slice(3, 8).map(p => p.id),
+      related_products: matchingProducts.slice(8, 15).map(p => p.id),
+      message: `${matchingProducts.length}件の商品が見つかりました`,
+      markdown_paths: []
+    };
+
+    return new Response(
+      `\`\`\`json\n${JSON.stringify(responseData, null, 2)}\n\`\`\``,
+      { 
+        status: 200,
+        headers: { 'Content-Type': 'text/plain' }
+      }
+    );
 
   } catch (error) {
     console.error('❌ Filter API エラー発生:', error);

@@ -24,7 +24,6 @@ export async function POST(request: NextRequest) {
       model: google('gemini-1.5-flash'),
       prompt: prompt,
       temperature: 0.7,
-      maxTokens: 200,
     });
 
     if (!text || text.trim().length === 0) {
@@ -43,7 +42,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('API Error:', error);
     
-    return new Response('エラーが発生しました: ' + (error?.message || 'Unknown error'), { 
+    return new Response('エラーが発生しました: ' + (error instanceof Error ? error.message : 'Unknown error'), { 
       status: 500,
       headers: { 'Content-Type': 'text/plain; charset=utf-8' }
     });

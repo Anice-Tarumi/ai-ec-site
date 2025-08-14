@@ -26,7 +26,6 @@ export async function POST(request: NextRequest) {
       model: google('gemini-1.5-flash'),
       prompt: prompt,
       temperature: 0.7,
-      maxTokens: 200,
     });
 
     if (!text || text.trim().length === 0) {
@@ -48,7 +47,7 @@ export async function POST(request: NextRequest) {
     console.error('API Error:', error);
     
     // Gemini APIエラーの場合のフォールバック
-    if (error?.message?.includes('API')) {
+    if (error instanceof Error && error.message?.includes('API')) {
       return new Response('申し訳ございません。一時的にサービスが利用できません。しばらく経ってからお試しください。', { 
         status: 503,
         headers: { 'Content-Type': 'text/plain; charset=utf-8' }

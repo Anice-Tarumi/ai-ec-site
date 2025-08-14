@@ -109,8 +109,9 @@ export async function POST(request: NextRequest) {
       console.error('💥 streamText エラー:', streamError);
       
       // デバッグ用：エラー詳細を返す
+      const errorMessage = streamError instanceof Error ? streamError.message : String(streamError);
       return new Response(
-        `エラー発生: ${streamError.message || streamError}\n\nAPI設定確認: キー長=${process.env.GEMINI_API_KEY?.length}`,
+        `エラー発生: ${errorMessage}\n\nAPI設定確認: キー長=${process.env.GEMINI_API_KEY?.length}`,
         { 
           status: 200,
           headers: { 'Content-Type': 'text/plain' }

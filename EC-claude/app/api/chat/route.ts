@@ -97,12 +97,14 @@ export async function POST(request: NextRequest) {
     
     console.log('🐛 デプロイ環境デバッグ情報:', debugInfo);
     
-    // デプロイ環境では確実に動作する固定レスポンスを使用
-    const fashionAdvice = generateFashionAdvice(sanitizedInput, ragContext.relevantProducts);
-    return new Response(fashionAdvice, { 
-      status: 200,
-      headers: { 'Content-Type': 'text/plain' }
-    });
+    // 確実に動作するテストレスポンス
+    return new Response(
+      `FIXED RESPONSE: ${sanitizedInput}についてのファッションアドバイスです。現在時刻: ${new Date().toISOString()}`,
+      { 
+        status: 200,
+        headers: { 'Content-Type': 'text/plain' }
+      }
+    );
 
   } catch (error) {
     console.error('❌ API エラー発生:', error);

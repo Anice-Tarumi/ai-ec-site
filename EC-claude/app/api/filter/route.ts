@@ -86,23 +86,39 @@ export async function POST(request: NextRequest) {
 
     console.log('🤖 Filter API呼び出し開始');
     
-    // デバッグ用：固定JSONレスポンスを返す
-    return new Response(
-      `\`\`\`json
+    try {
+      const result = streamText({
+        model: google('gemini-1.5-flash'),
+        prompt: `${systemPrompt}\n\n**ユーザーの質問**: ${sanitizedInput}`,
+        temperature: 0.3,
+        onFinish: async ({ text }) => {
+          console.log('✅ Filter AI応答完了:', text.length, 'characters');
+        }
+      });
+
+      console.log('🚀 フィルターレスポンス返却');
+      return result.toTextStreamResponse();
+    } catch (streamError) {
+      console.error('💥 Filter streamText エラー:', streamError);
+      
+      // エラー時は固定JSONを返す
+      return new Response(
+        `\`\`\`json
 {
-  "summary": "赤い服を探しています",
-  "main_products": ["test1"],
+  "summary": "エラーが発生しました",
+  "main_products": [],
   "sub_products": [],
   "related_products": [],
-  "message": "デバッグ用の固定レスポンス",
+  "message": "フィルターAPIでエラーが発生しました",
   "markdown_paths": []
 }
 \`\`\``,
-      { 
-        status: 200,
-        headers: { 'Content-Type': 'text/plain' }
-      }
-    );
+        { 
+          status: 200,
+          headers: { 'Content-Type': 'text/plain' }
+        }
+      );
+    }
 
   } catch (error) {
     console.error('❌ Filter API エラー発生:', error);

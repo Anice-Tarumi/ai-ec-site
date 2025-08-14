@@ -79,21 +79,41 @@ export async function POST(request: NextRequest) {
     const systemPrompt = createSystemPrompt(ragContext, sanitizedInput);
     console.log('📝 システムプロンプト生成完了');
 
-    // テスト用: 固定レスポンスを返す
+    // Gemini API設定確認
     console.log('🔑 APIキー確認:', {
       hasKey: !!process.env.GEMINI_API_KEY,
       keyLength: process.env.GEMINI_API_KEY?.length,
       keyPrefix: process.env.GEMINI_API_KEY?.substring(0, 10)
     });
 
-    // デバッグ用：一時的に固定レスポンスを返す
-    return new Response(
-      `デバッグ: 赤い服についてのアドバイスです。APIキー長: ${process.env.GEMINI_API_KEY?.length}`,
-      { 
-        status: 200,
-        headers: { 'Content-Type': 'text/plain' }
-      }
-    );
+    // AI SDKのstreamTextを使用してストリーミング実装
+    console.log('🤖 Gemini API呼び出し開始');
+    
+    try {
+      const result = streamText({
+        model: google('gemini-1.5-flash'),
+        prompt: `${systemPrompt}\n\n**ユーザーの質問**: ${sanitizedInput}`,
+        temperature: 0.7,
+        onFinish: async ({ text }) => {
+          console.log('✅ AI応答完了:', text.length, 'characters');
+        }
+      });
+
+      console.log('🚀 ストリーミングレスポンス返却');
+      return result.toTextStreamResponse();
+    } catch (streamError) {
+      console.error('💥 streamText エラー:', streamError);
+      
+      // エラー時はデバッグ情報を返す
+      const errorMessage = streamError instanceof Error ? streamError.message : String(streamError);
+      return new Response(
+        `Gemini APIエラー: ${errorMessage}\n\nAPIキー長: ${process.env.GEMINI_API_KEY?.length}`,
+        { 
+          status: 200,
+          headers: { 'Content-Type': 'text/plain' }
+        }
+      );
+    }
 
   } catch (error) {
     console.error('❌ API エラー発生:', error);

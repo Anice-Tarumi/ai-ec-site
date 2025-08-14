@@ -80,32 +80,12 @@ export default function ChatBox() {
           fullResponse += chunk;
           console.log('📝 受信チャンク:', chunk.substring(0, 100) + (chunk.length > 100 ? '...' : ''));
           
-          // 文字ごとのストリーミング表示
-          const displayCharacters = () => {
-            if (displayedLength < fullResponse.length) {
-              displayedLength++;
-              
-              let displayText = fullResponse.substring(0, displayedLength);
-              setStreamingMessage(displayText);
-              setTimeout(displayCharacters, 50);
-            }
-          };
-          
-          // 新しいチャンクが来たら文字表示開始
-          displayCharacters();
+          // 受信したチャンクを即座に表示
+          setStreamingMessage(fullResponse);
         }
         
-        // 残りの文字も表示
-        const finishDisplay = () => {
-          if (displayedLength < fullResponse.length) {
-            displayedLength++;
-            
-            let displayText = fullResponse.substring(0, displayedLength);
-            setStreamingMessage(displayText);
-            setTimeout(finishDisplay, 50);
-          }
-        };
-        finishDisplay();
+        // 最終的に全文表示を確実にする
+        setStreamingMessage(fullResponse);
         
         console.log('✅ ストリーミング読み取り完了');
         console.log('📊 最終レスポンス:', fullResponse);

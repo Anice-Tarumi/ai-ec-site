@@ -107,7 +107,15 @@ export async function POST(request: NextRequest) {
       return result.toTextStreamResponse();
     } catch (streamError) {
       console.error('💥 streamText エラー:', streamError);
-      throw streamError;
+      
+      // デバッグ用：エラー詳細を返す
+      return new Response(
+        `エラー発生: ${streamError.message || streamError}\n\nAPI設定確認: キー長=${process.env.GEMINI_API_KEY?.length}`,
+        { 
+          status: 200,
+          headers: { 'Content-Type': 'text/plain' }
+        }
+      );
     }
 
   } catch (error) {

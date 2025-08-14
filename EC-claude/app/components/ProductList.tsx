@@ -17,21 +17,13 @@ export default function ProductList() {
           className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:scale-105 animate-scale-in border border-gray-100"
           style={{ animationDelay: `${index * 150}ms` }}
         >
-          <div className="relative aspect-w-1 aspect-h-1 bg-gradient-to-br from-gray-100 to-gray-200">
-            <img
-              src={product.image}
-              alt={product.name}
-              className="w-full h-56 object-cover"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                const svg = encodeURIComponent(`<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#f3f4f6;stop-opacity:1" /><stop offset="100%" style="stop-color:#e5e7eb;stop-opacity:1" /></linearGradient></defs><rect width="100%" height="100%" fill="url(#bg)"/><text x="50%" y="45%" font-family="Arial" font-size="16" fill="#6b7280" text-anchor="middle" dominant-baseline="middle">${product.name}</text><text x="50%" y="60%" font-family="Arial" font-size="12" fill="#9ca3af" text-anchor="middle" dominant-baseline="middle">画像準備中</text></svg>`);
-                target.src = `data:image/svg+xml,${svg}`;
-              }}
-            />
-            <div className="absolute top-3 right-3">
-              <span className="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
+          <div className="relative bg-gradient-to-br from-blue-50 to-purple-50 p-6 flex items-center justify-center">
+            <div className="text-center">
+              <div className="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg inline-block mb-2">
                 おすすめ
-              </span>
+              </div>
+              <h4 className="font-bold text-gray-700 text-lg">{product.name}</h4>
+              <p className="text-gray-500 text-sm mt-1">{product.brand}</p>
             </div>
           </div>
           

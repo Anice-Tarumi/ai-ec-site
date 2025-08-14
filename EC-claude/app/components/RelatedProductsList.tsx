@@ -18,17 +18,11 @@ export default function RelatedProductsList() {
           style={{ animationDelay: `${index * 200}ms` }}
         >
           <div className="flex">
-            <div className="w-24 h-24 bg-gradient-to-br from-green-100 to-green-200 flex-shrink-0">
-              <img
-                src={product.image}
-                alt={product.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  const svg = encodeURIComponent(`<svg width="96" height="96" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#dcfce7;stop-opacity:1" /><stop offset="100%" style="stop-color:#bbf7d0;stop-opacity:1" /></linearGradient></defs><rect width="100%" height="100%" fill="url(#bg)"/><text x="50%" y="45%" font-family="Arial" font-size="9" fill="#16a34a" text-anchor="middle" dominant-baseline="middle">${product.name.slice(0, 6)}...</text><text x="50%" y="60%" font-family="Arial" font-size="7" fill="#22c55e" text-anchor="middle" dominant-baseline="middle">関連商品</text></svg>`);
-                  target.src = `data:image/svg+xml,${svg}`;
-                }}
-              />
+            <div className="w-24 h-24 bg-gradient-to-br from-green-100 to-green-200 flex-shrink-0 flex items-center justify-center">
+              <div className="text-center">
+                <p className="text-xs text-green-700 font-medium">関連</p>
+                <p className="text-xs text-green-600">{product.name.slice(0, 4)}</p>
+              </div>
             </div>
             
             <div className="flex-1 p-4">

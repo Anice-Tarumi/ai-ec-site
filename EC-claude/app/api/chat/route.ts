@@ -313,19 +313,4 @@ ${compressedProducts}
 回答は100-200文字程度で簡潔にまとめてください。`;
 }
 
-// 固定ファッションアドバイス生成関数
-function generateFashionAdvice(input: string, products: Product[]): string {
-  const colorKeywords = ['黒', '白', '赤', '青', '緑', '黄', 'ピンク', 'グレー', 'ネイビー', 'ベージュ', 'ブラウン'];
-  const requestedColors = colorKeywords.filter(color => input.includes(color));
-  
-  if (requestedColors.includes('赤')) {
-    return "赤い服は情熱的で目を引く色です。白やベージュのボトムスと合わせると上品に仕上がります。アクセサリーはゴールドがよく映えます。デニムと合わせればカジュアルに、黒のパンツと合わせればエレガントな印象になります。";
-  } else if (requestedColors.includes('黒')) {
-    return "黒い服はシックで洗練された印象を与えます。どんな色とも相性が良く、特に白と組み合わせるとモダンな印象に。カラフルなアクセサリーを加えると華やかさもプラスできます。";
-  } else if (requestedColors.includes('白')) {
-    return "白い服は清潔感があり、春夏にぴったりです。パステルカラーや明るい色と合わせると爽やかに。アクセサリーは何色でも映えるので、お好みの色を楽しめます。";
-  } else {
-    return `${input}についてのアドバイス：お好みに合わせて、季節感を大切にしたコーディネートを心がけましょう。色の組み合わせやシルエットのバランスを考えると、より素敵に仕上がります。`;
-  }
-}
 

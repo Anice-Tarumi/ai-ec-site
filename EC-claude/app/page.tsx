@@ -193,17 +193,11 @@ export default function Home() {
                   className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 hover:scale-105 animate-fade-in-up"
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
-                  <div className="aspect-w-1 aspect-h-1 bg-gray-200">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-48 object-cover"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        const svg = encodeURIComponent(`<svg width="300" height="300" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#f3f4f6"/><text x="50%" y="50%" font-family="Arial" font-size="14" fill="#6b7280" text-anchor="middle" dominant-baseline="middle">${product.name}</text></svg>`);
-                        target.src = `data:image/svg+xml,${svg}`;
-                      }}
-                    />
+                  <div className="bg-gradient-to-br from-gray-100 to-gray-200 h-48 flex items-center justify-center">
+                    <div className="text-center">
+                      <h4 className="font-bold text-gray-700 text-lg">{product.name}</h4>
+                      <p className="text-gray-500 text-sm mt-1">{product.brand}</p>
+                    </div>
                   </div>
                   <div className="p-4">
                     <h3 className="font-semibold text-gray-900 mb-2">{product.name}</h3>

@@ -18,17 +18,11 @@ export default function AccessoryList() {
           style={{ animationDelay: `${index * 200}ms` }}
         >
           <div className="flex">
-            <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 flex-shrink-0">
-              <img
-                src={product.image}
-                alt={product.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  const svg = encodeURIComponent(`<svg width="96" height="96" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#f3f4f6;stop-opacity:1" /><stop offset="100%" style="stop-color:#e5e7eb;stop-opacity:1" /></linearGradient></defs><rect width="100%" height="100%" fill="url(#bg)"/><text x="50%" y="50%" font-family="Arial" font-size="10" fill="#6b7280" text-anchor="middle" dominant-baseline="middle">${product.name.slice(0, 8)}...</text></svg>`);
-                  target.src = `data:image/svg+xml,${svg}`;
-                }}
-              />
+            <div className="w-24 h-24 bg-gradient-to-br from-purple-100 to-purple-200 flex-shrink-0 flex items-center justify-center">
+              <div className="text-center">
+                <p className="text-xs text-purple-700 font-medium">アイテム</p>
+                <p className="text-xs text-purple-600">{product.name.slice(0, 4)}</p>
+              </div>
             </div>
             
             <div className="flex-1 p-4">

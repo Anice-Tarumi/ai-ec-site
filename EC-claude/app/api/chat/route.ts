@@ -109,20 +109,7 @@ export async function POST(request: NextRequest) {
       const result = streamText({
         model: google('gemini-1.5-flash'),
         prompt: `${systemPrompt}\n\n**ユーザーの質問**: ${sanitizedInput}`,
-        temperature: 0.7,
-        onStart: () => {
-          console.log('🚀 Gemini APIストリーミング開始');
-        },
-        onFinish: async ({ text, finishReason }) => {
-          console.log('✅ AI応答完了:', { 
-            textLength: text.length, 
-            finishReason,
-            textPreview: text.substring(0, 100)
-          });
-        },
-        onError: (error) => {
-          console.error('💥 Gemini APIエラー:', error);
-        }
+        temperature: 0.7
       });
 
       console.log('📤 ストリームレスポンス作成中');

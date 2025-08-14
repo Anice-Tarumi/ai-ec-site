@@ -23,7 +23,9 @@ export async function POST(request: NextRequest) {
 
     // Gemini APIを使って一括生成（ストリーミングなし）
     const { text } = await generateText({
-      model: google('gemini-1.5-flash'),
+      model: google('gemini-1.5-flash', {
+        apiKey: process.env.GEMINI_API_KEY,
+      }),
       prompt: prompt,
       temperature: 0.7,
     });

@@ -21,7 +21,9 @@ export async function POST(request: NextRequest) {
     const prompt = `ファッションアドバイザーとして「${userInput}」について100文字程度で具体的なアドバイスをしてください。`;
 
     const { text } = await generateText({
-      model: google('gemini-1.5-flash'),
+      model: google('gemini-1.5-flash', {
+        apiKey: process.env.GEMINI_API_KEY,
+      }),
       prompt: prompt,
       temperature: 0.7,
     });

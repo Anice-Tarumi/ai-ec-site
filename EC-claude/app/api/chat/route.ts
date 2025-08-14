@@ -198,7 +198,7 @@ function performRAGSearch(input: string, products: Product[]): RAGContext {
     // 色の厳密フィルタリング
     if (requestedColors.length > 0) {
       const hasRequestedColor = requestedColors.some(color => 
-        colors.some(productColor => productColor.includes(color))
+        colors.some(productColor => productColor && productColor.includes(color))
       );
       if (hasRequestedColor) {
         score += 12; // 指定色があれば最高スコア
@@ -209,8 +209,8 @@ function performRAGSearch(input: string, products: Product[]): RAGContext {
     
     // 完全一致に高いスコア
     if (p.name && p.name.toLowerCase().includes(lowerInput)) score += 10;
-    if (categories.some(cat => cat.toLowerCase().includes(lowerInput))) score += 8;
-    if (keywords.some(keyword => keyword.toLowerCase().includes(lowerInput))) score += 5;
+    if (categories.some(cat => cat && cat.toLowerCase().includes(lowerInput))) score += 8;
+    if (keywords.some(keyword => keyword && keyword.toLowerCase().includes(lowerInput))) score += 5;
     
     // 部分一致に中程度のスコア
     if (p.brand && p.brand.toLowerCase().includes(lowerInput)) score += 4;
@@ -262,7 +262,7 @@ function createSystemPrompt(ragContext: RAGContext, userInput: string): string {
     let colorInfo = colors.join(',');
     if (requestedColors.length > 0) {
       const matchingColors = colors.filter(c => 
-        requestedColors.some(requested => c.includes(requested))
+        c && requestedColors.some(requested => c.includes(requested))
       );
       if (matchingColors.length > 0) {
         colorInfo = matchingColors.join(',') + `(${colors.join(',')}展開)`;

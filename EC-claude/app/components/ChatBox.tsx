@@ -40,7 +40,7 @@ export default function ChatBox() {
       const products = getFilteredProducts();
       console.log('📡 API呼び出し開始:', userMessage);
       
-      const response = await fetch('/api/chat2', {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -75,17 +75,16 @@ export default function ChatBox() {
         });
       }
 
-      // 商品フィルタリング用の別APIを呼び出し
+      // 商品フィルタリング用の別APIを呼び出し（RAGベース）
       try {
-        console.log('🔍 商品フィルターAPI呼び出し開始');
+        console.log('🔍 RAG商品フィルターAPI呼び出し開始');
         const filterResponse = await fetch('/api/filter', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              userInput: userMessage,
-              products: products
+              userInput: userMessage
             })
           });
 
@@ -99,7 +98,7 @@ export default function ChatBox() {
               const jsonStr = jsonMatch[1] || jsonMatch[0];
               const aiResponse = JSON.parse(jsonStr);
               console.log('✅ フィルターJSON解析成功:', aiResponse);
-              handleAIResponse(aiResponse);
+              await handleAIResponse(aiResponse);
             } else {
               console.log('⚠️ フィルターAPIでJSON未検出:', filterResult);
             }

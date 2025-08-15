@@ -7,46 +7,26 @@ import ProductList from './components/ProductList';
 import AccessoryList from './components/AccessoryList';
 import Banner from './components/Banner';
 import RelatedProductsList from './components/RelatedProductsList';
-import VectorSearch from './utils/VectorSearch';
 import { Product } from './types';
 
 export default function Home() {
   const { 
-    allProducts, 
     mainProducts, 
     subProducts, 
     relatedProducts,
     isLoading, 
     streamingMessage,
     isStreaming,
-    chatMessages,
-    setAllProducts,
-    setVectorSearch
+    chatMessages
   } = useStore();
   
   const [showResults, setShowResults] = useState(false);
-  const [vectorSearch] = useState(() => new VectorSearch());
 
   useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        const response = await fetch('/data/products.json');
-        const products: Product[] = await response.json();
-        setAllProducts(products);
-        
-        // RAG用にベクトル化（バックグラウンドで実行）
-        console.log('🔍 RAG検索の初期化中...');
-        setVectorSearch(vectorSearch);
-        vectorSearch.indexProducts(products).then(() => {
-          console.log('✅ RAG検索の準備完了');
-        });
-      } catch (error) {
-        console.error('商品データの読み込みに失敗しました:', error);
-      }
-    };
-
-    loadProducts();
-  }, [setAllProducts, setVectorSearch, vectorSearch]);
+    // RAGシステムに移行したため、静的JSONファイルの読み込みは不要
+    // 商品データはAPIから動的に取得される
+    console.log('🔍 RAGベースの商品検索システム初期化完了');
+  }, []);
 
   useEffect(() => {
     if (mainProducts.length > 0 || subProducts.length > 0) {
@@ -184,35 +164,18 @@ export default function Home() {
         )}
 
         {!showResults && !isLoading && (
-          <div className="mb-8 animate-fade-in">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">全ての商品</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {allProducts.slice(0, 12).map((product, index) => (
-                <div 
-                  key={product.id} 
-                  className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 hover:scale-105 animate-fade-in-up"
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <div className="bg-gradient-to-br from-gray-100 to-gray-200 h-48 flex items-center justify-center">
-                    <div className="text-center">
-                      <h4 className="font-bold text-gray-700 text-lg">{product.name}</h4>
-                      <p className="text-gray-500 text-sm mt-1">{product.brand}</p>
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-semibold text-gray-900 mb-2">{product.name}</h3>
-                    <p className="text-sm text-gray-600 mb-2">{product.category.join(', ')}</p>
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {product.color.map((color, colorIndex) => (
-                        <span key={colorIndex} className="text-xs bg-gray-100 px-2 py-1 rounded">
-                          {color}
-                        </span>
-                      ))}
-                    </div>
-                    <p className="text-lg font-bold text-blue-600">¥{product.price.toLocaleString()}</p>
-                  </div>
-                </div>
-              ))}
+          <div className="mb-8 animate-fade-in text-center py-16">
+            <div className="max-w-md mx-auto">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">AI商品検索</h2>
+              <p className="text-gray-600 mb-6">
+                自然言語で商品を検索してください。<br />
+                例：「赤い服」「オフィスカジュアル」「デート用の服」
+              </p>
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-xl border border-blue-200">
+                <p className="text-sm text-blue-800">
+                  🤖 AIがあなたの要望に合った商品を厳選してお届けします
+                </p>
+              </div>
             </div>
           </div>
         )}

@@ -7,10 +7,10 @@ export const maxDuration = 25;
 
 export async function POST(request: NextRequest) {
   try {
-    const { userInput, products } = await request.json();
+    const { userInput, products = [] } = await request.json();
 
-    if (!userInput || !products) {
-      return new Response(JSON.stringify({ error: 'Missing required parameters' }), { 
+    if (!userInput) {
+      return new Response(JSON.stringify({ error: 'userInput is required' }), { 
         status: 400, 
         headers: { 'Content-Type': 'application/json' } 
       });

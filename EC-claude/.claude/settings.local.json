@@ -33,7 +33,11 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(open http://localhost:3000)",
-      "WebFetch(domain:ai-ec-site-stsk.vercel.app)"
+      "WebFetch(domain:ai-ec-site-stsk.vercel.app)",
+      "Bash(python3 -m pip install:*)",
+      "Bash(python3:*)",
+      "Bash(sed:*)",
+      "Bash(/dev/null)"
     ],
     "deny": []
   }

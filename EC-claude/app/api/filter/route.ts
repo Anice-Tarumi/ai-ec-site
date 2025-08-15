@@ -45,14 +45,14 @@ interface RAGContext {
 }
 
 export async function POST(request: NextRequest) {
-  console.log('🔍 Filter API リクエスト受信');
+  console.log('🔍 RAG Filter API リクエスト受信');
   try {
-    const { userInput, products }: { userInput: string; products: Product[] } = await request.json();
-    console.log('📝 Filter リクエストデータ:', { userInput, productsCount: products?.length });
+    const { userInput }: { userInput: string } = await request.json();
+    console.log('📝 Filter リクエストデータ:', { userInput });
 
-    if (!userInput || !products) {
+    if (!userInput) {
       return new Response(
-        JSON.stringify({ error: 'Missing required parameters' }),
+        JSON.stringify({ error: 'userInput is required' }),
         { 
           status: 400,
           headers: { 'Content-Type': 'application/json' }
@@ -60,54 +60,69 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'your_gemini_api_key_here') {
+    const sanitizedInput = sanitizeUserInput(userInput);
+    
+    // 新しい RAG 検索を使用
+    console.log('🔍 RAG検索API呼び出し開始');
+    const searchResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/search`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: sanitizedInput,
+        nResults: 15
+      })
+    });
+
+    if (!searchResponse.ok) {
+      throw new Error(`Search API failed: ${searchResponse.status}`);
+    }
+
+    const searchData = await searchResponse.json();
+    console.log('📊 RAG検索結果:', {
+      productsFound: searchData.products?.length || 0,
+      searchScore: searchData.searchScore,
+      searchType: searchData.searchType,
+      searchTimeMs: searchData.searchTimeMs
+    });
+
+    const relevantProducts = searchData.products || [];
+
+    if (relevantProducts.length === 0) {
+      const responseData = {
+        summary: `${sanitizedInput}に関連する商品が見つかりませんでした`,
+        main_products: [],
+        sub_products: [],
+        related_products: [],
+        message: "検索条件を変えてお試しください",
+        markdown_paths: []
+      };
+
       return new Response(
-        JSON.stringify({ 
-          error: 'Gemini API key is not configured',
-          message: 'APIキーが設定されていません。.env.localファイルに正しいGeminiAPIキーを設定してください。',
-          details: 'https://makersuite.google.com/app/apikey からAPIキーを取得してください。'
-        }),
+        `\`\`\`json\n${JSON.stringify(responseData, null, 2)}\n\`\`\``,
         { 
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
+          status: 200,
+          headers: { 'Content-Type': 'text/plain' }
         }
       );
     }
 
-    const sanitizedInput = sanitizeUserInput(userInput);
-    
-    // RAG検索：商品の関連性スコアリング
-    console.log('🔍 RAG検索の準備完了');
-    const ragContext = performRAGSearch(sanitizedInput, products);
-    console.log('📊 関連商品数:', ragContext.relevantProducts.length);
-    
-    const systemPrompt = createFilterPrompt(ragContext, sanitizedInput);
-    console.log('📝 フィルタープロンプト生成完了');
-
-    console.log('🤖 Filter API呼び出し開始');
-    
-    // デプロイ環境での回避策: ローカル商品フィルタリング
-    const colorKeywords = ['黒', '白', '赤', '青', '緑', '黄', 'ピンク', 'グレー', 'ネイビー', 'ベージュ', 'ブラウン'];
-    const requestedColors = colorKeywords.filter(color => sanitizedInput.includes(color));
-    
-    // 色に基づく簡単なフィルタリング
-    const matchingProducts = ragContext.relevantProducts.filter(p => {
-      if (requestedColors.length > 0) {
-        return requestedColors.some(color => 
-          p.color.some(productColor => productColor.includes(color))
-        );
-      }
-      return true;
-    });
-
+    // 商品を3つのカテゴリに分類
     const responseData = {
-      summary: `${sanitizedInput}の検索結果`,
-      main_products: matchingProducts.slice(0, 3).map(p => p.id),
-      sub_products: matchingProducts.slice(3, 8).map(p => p.id),
-      related_products: matchingProducts.slice(8, 15).map(p => p.id),
-      message: `${matchingProducts.length}件の商品が見つかりました`,
+      summary: `${sanitizedInput}の検索結果（${relevantProducts.length}件）`,
+      main_products: relevantProducts.slice(0, 3).map((p: Product) => p.id),
+      sub_products: relevantProducts.slice(3, 8).map((p: Product) => p.id),
+      related_products: relevantProducts.slice(8, 15).map((p: Product) => p.id),
+      message: `ベクトル検索で${relevantProducts.length}件の関連商品が見つかりました（検索スコア: ${searchData.searchScore?.toFixed(3) || 'N/A'}）`,
       markdown_paths: []
     };
+
+    console.log('✅ Filter処理完了:', {
+      mainProducts: responseData.main_products.length,
+      subProducts: responseData.sub_products.length,
+      relatedProducts: responseData.related_products.length
+    });
 
     return new Response(
       `\`\`\`json\n${JSON.stringify(responseData, null, 2)}\n\`\`\``,
@@ -134,93 +149,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// RAG検索：商品の関連性スコアリング
-function performRAGSearch(input: string, products: Product[]): RAGContext {
-  const lowerInput = input.toLowerCase();
-  
-  // 色キーワードの検出
-  const colorKeywords = ['黒', '白', '赤', '青', '緑', '黄', 'ピンク', 'グレー', 'ネイビー', 'ベージュ', 'ブラウン'];
-  const requestedColors = colorKeywords.filter(color => lowerInput.includes(color));
-  
-  const scoredProducts = products.map(p => {
-    let score = 0;
-    
-    // 色の厳密フィルタリング
-    if (requestedColors.length > 0) {
-      const hasRequestedColor = requestedColors.some(color => 
-        p.color.some(productColor => productColor.includes(color))
-      );
-      if (hasRequestedColor) {
-        score += 12; // 指定色があれば最高スコア
-      } else {
-        score -= 3;  // 指定色がなければマイナス
-      }
-    }
-    
-    // 完全一致に高いスコア
-    if (p.name.toLowerCase().includes(lowerInput)) score += 10;
-    if (p.category.some(cat => cat.toLowerCase().includes(lowerInput))) score += 8;
-    if (p.keywords.some(keyword => keyword.toLowerCase().includes(lowerInput))) score += 5;
-    
-    // 部分一致に中程度のスコア
-    if (p.brand.toLowerCase().includes(lowerInput)) score += 4;
-    if (p.material.toLowerCase().includes(lowerInput)) score += 3;
-    if (p.target.toLowerCase().includes(lowerInput)) score += 3;
-    if (p.scene.toLowerCase().includes(lowerInput)) score += 3;
-    if (p.description.toLowerCase().includes(lowerInput)) score += 2;
-    
-    // 季節・新商品ボーナス
-    if (p.is_new) score += 1;
-    
-    return { product: p, score };
-  });
-  
-  // スコア順でソートして関連度の高い商品を選出
-  const relevantProducts = scoredProducts
-    .filter(item => item.score > 2)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 15)
-    .map(item => item.product);
-    
-  // 関連商品がない場合は人気商品を表示
-  const finalProducts = relevantProducts.length > 0 
-    ? relevantProducts 
-    : products.sort((a, b) => b.rating - a.rating).slice(0, 15);
-    
-  const avgScore = scoredProducts.reduce((sum, item) => sum + item.score, 0) / scoredProducts.length;
-  
-  return {
-    relevantProducts: finalProducts,
-    searchScore: avgScore
-  };
-}
-
-// フィルター用システムプロンプト生成
-function createFilterPrompt(ragContext: RAGContext, userInput: string): string {
-  const compressedProducts = ragContext.relevantProducts.map(p => {
-    return `${p.id}|${p.name}|${p.brand}|${p.category.join(',')}|${p.color.join(',')}|${p.material}|${p.keywords.join(',')}|${p.target}|${p.scene}|¥${p.price}`;
-  }).join('\n');
-  
-  return `あなたは商品フィルタリングシステムです。ユーザーの要望に基づいて商品IDを分類してください。
-
-**検索された関連商品（関連度順）：**
-${compressedProducts}
-
-**検索スコア**: ${ragContext.searchScore.toFixed(2)}
-**関連商品数**: ${ragContext.relevantProducts.length}点
-
-以下のJSON形式で商品IDを分類してください：
-
-\`\`\`json
-{
-  "summary": "要望を20文字で要約",
-  "main_products": ["最も重要な商品ID（最大3個）"],
-  "sub_products": ["コーディネート商品ID（最大5個）"],
-  "related_products": ["関連商品ID（最大7個）"],
-  "message": "選んだ理由を50文字以内",
-  "markdown_paths": []
-}
-\`\`\`
-
-提供された商品IDのみを使用してください。`;
-}

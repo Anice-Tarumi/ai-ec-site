@@ -49,7 +49,7 @@ export interface StoreState {
   vectorSearch: any; // VectorSearch instance
   addChatMessage: (message: ChatMessage) => void;
   setIsLoading: (loading: boolean) => void;
-  handleAIResponse: (response: AIResponse) => void;
+  handleAIResponse: (response: AIResponse) => Promise<void>;
   getFilteredProducts: () => Product[];
   setAllProducts: (products: Product[]) => void;
   setStreamingMessage: (message: string) => void;

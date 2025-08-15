@@ -19,7 +19,7 @@ export interface ProductSearchOptions {
 export interface SearchHistoryEntry {
   query: string;
   vectorId?: string;
-  searchType: 'vector' | 'hybrid' | 'traditional';
+  searchType: 'vector' | 'hybrid' | 'traditional' | 'fallback';
   resultsCount: number;
   searchTimeMs: number;
 }
@@ -27,15 +27,14 @@ export interface SearchHistoryEntry {
 class DatabaseClient {
   private pool: Pool | null = null;
 
-  // データベース接続初期化
+  // データベース接続初期化（import-products.jsと同じ設定）
   async initialize() {
-    if (!process.env.DATABASE_URL) {
-      throw new Error('DATABASE_URL not configured');
-    }
-
     this.pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      host: "localhost",
+      port: 5432,
+      user: "postgres",
+      password: "taru3822",
+      database: "mydb",
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,
